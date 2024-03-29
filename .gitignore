@@ -31,3 +31,5 @@
 *.out
 *.app
 /src/widget.cpp.bak
+/QChatServer/out
+/QChatServer/.vs

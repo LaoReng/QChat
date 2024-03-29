@@ -1,10 +1,11 @@
 ﻿#pragma execution_character_set("utf-8")
 #include "widget.h"
 #include "ui_widget.h"
+#include "packet.h"
 #include <QDebug>
 #include <QDialog>
 #include <QMessageBox>
-
+#include <QFileDialog> // QFileDlg头文件
 #include <process.h>  // 创建线程相关头文件
 
 
@@ -28,8 +29,8 @@ Widget::Widget(QWidget *parent)
     m_hThread = (HANDLE)_beginthread(recvThreadEny, 0, this);
     // 将信号和槽进行关联
     connect(&m_AddrInfo, &LocalAddressInfo::UpdateAddr, this, &Widget::UpdateAddr);
-
     // connect(&m_AddrInfo, SIGNAL(UpdateAddr(bool)), this, SLOT(UpdateAddr(bool)));
+    connect(this, &Widget::CreateMessageDlg, this, &Widget::on_MessageDlg);
 }
 
 Widget::~Widget()
@@ -46,14 +47,11 @@ void Widget::on_BUT_SEND_clicked(bool checked)
     QString chatBuf = ui->TChat->toPlainText();
     if(chatBuf == "") {
         // QDialog InfoDlg(this);
-        QMessageBox::question(nullptr, "", "", QMessageBox::Yes);
+        QMessageBox::question(nullptr, "错误", "当前没有要发送的信息", QMessageBox::Yes);
         // InfoDlg.exec();
         return;
     }
     ui->TChat->setText("");
-    QString str("0.0.0.0");
-    qDebug() << str;
-    qDebug() << m_recverAddr.toString();
     QNetworkDatagram Data(chatBuf.toUtf8(), m_recverAddr, m_recverPort);
 
     qint64 ret = m_sock.writeDatagram(Data);
@@ -64,7 +62,7 @@ void Widget::on_BUT_SEND_clicked(bool checked)
         qDebug() << "info send fail, ret = " << ret;
         return;
     }
-    qDebug(" ret = %d\n", ret);
+    qDebug("处理完成 ret = %d\n", ret);
 
     return;
 }
@@ -112,6 +110,9 @@ void Widget::recvThreadMain()
 {
     qDebug() << "thread start";
     int count = 0;
+    // Sleep(3000);
+    // emit CreateMessageDlg("消息", QString("接收文件成功"), QMessageBox::Yes);
+
     while(m_isInvalid){
         if(!m_isAddrUpdate){
             if(m_sock.hasPendingDatagrams()){
@@ -121,16 +122,23 @@ void Widget::recvThreadMain()
                 qint64 ret = m_sock.readDatagram(buf, sizeof(buf), &recvIPAddr);
                 if(ret > 0){
                     qDebug() << "index message";
-                    QString info = "<";
-                    info = info + recvIPAddr.toString() + ">: " + buf;
-                    ui->MSG_TE->append(info);
+                    FileInfo fi(buf, ret);
+                    if(fi.GetHead()==0XFEFF){
+                        // QMessageBox::question(this, "消息", QString("接收文件成功"), QMessageBox::Yes); // 这块会产生错误，因为不是GUI的线程
+                        emit CreateMessageDlg("消息", QString("接收文件成功"), QMessageBox::Yes);
+                    }
+                    else{
+                        QString info = "<";
+                        info = info + recvIPAddr.toString() + ">: " + buf;
+                        ui->MSG_TE->append(info);
+                    }
                 }
                 else if(ret < 0){
                     Sleep(500);
                     count++;
                     if(count >= 10){
                         qDebug() << "read error:" << m_sock.errorString();
-                        // QMessageBox::question(nullptr, "", QString(", "), QMessageBox::Yes);
+                        // QMessageBox::question(nullptr, "错误", QString("消息接收失败"), QMessageBox::Yes);
                         break;
                     }
                 }
@@ -156,9 +164,45 @@ void Widget::on_LE_PORT_textChanged(const QString &arg1)
     qDebug() << m_recverPort;
 }
 
+void Dump(const std::string& str)
+{
+    const char* pStr = str.c_str();
+    for(int i=0;i<str.size();i+=4){
+        qDebug("%04X", *(pStr + i));
+    }
+}
+
 
 void Widget::on_BUT_SENDFILE_clicked(bool checked)
 {
+    //    QString Path = FileDlg.getOpenFileName(this, "选择要发送的文件", "C:\\"); // 这种方式不能修改按钮的文本内容
+    //    qDebug() << Path;
+    QFileDialog FileDlg(this, "选择要发送的文件", "C:\\"); // 打开文件对话框，让用户选择要发送的文件
+    FileDlg.setLabelText(QFileDialog::Accept, "选择");  // 设置Accept按钮的显示文本内容
+    int ret = FileDlg.exec();
+    qDebug("ret = %d",ret);
+    if(ret){
+        QStringList Paths = FileDlg.selectedFiles();
+        if(Paths.isEmpty() == false){
+            QString Path = Paths.at(0);
+            qDebug() << Path;
+            FileInfo fi(Path.toUtf8().data());
+            std::string str = fi.toString();
+            // Dump(fi.toString());
+            QByteArray arr(str.c_str(), str.size());
+            QNetworkDatagram Data(arr, m_recverAddr, m_recverPort);
+            qint64 ret = m_sock.writeDatagram(Data);
+            if(ret>0){
 
+            }
+            // 将文件进行发送
+        }
+    }
+
+}
+
+void Widget::on_MessageDlg(const QString &title, const QString &text, int button0)
+{
+    QMessageBox::question(this, title, text, button0);
 }
 

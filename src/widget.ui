@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Widget</string>
+   <string>QChat</string>
   </property>
   <widget class="QPushButton" name="BUT_SEND">
    <property name="geometry">

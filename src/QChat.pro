@@ -13,10 +13,12 @@ CONFIG += c++11
 SOURCES += \
     localaddressinfo.cpp \
     main.cpp \
+    packet.cpp \
     widget.cpp
 
 HEADERS += \
     localaddressinfo.h \
+    packet.h \
     widget.h
 
 FORMS += \

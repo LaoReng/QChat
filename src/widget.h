@@ -2,6 +2,7 @@
 #define WIDGET_H
 
 #include <QWidget>
+#include <QMessageBox>
 #include <Windows.h>
 #include <QtNetwork/QNetworkDatagram>
 #include <QtNetwork/qudpsocket.h> // UDP头文件
@@ -19,6 +20,10 @@ public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
 
+signals: // 信号
+    // 显示消息框
+    void CreateMessageDlg(const QString &title, const QString& text, int button0);
+
 private slots: // 槽函数
     // 用户点击发送按钮
     void on_BUT_SEND_clicked(bool checked);
@@ -30,9 +35,10 @@ private slots: // 槽函数
     void on_LE_IPADDR_textChanged(const QString &arg1);
     // port端口文本框内容发生改变
     void on_LE_PORT_textChanged(const QString &arg1);
-
+    // 用户点击发送文件按钮
     void on_BUT_SENDFILE_clicked(bool checked);
-
+    // 显示对话框
+    void on_MessageDlg(const QString &title, const QString& text, int button0);
 private:
     bool InitSocket(); // 初始化套接字
 protected:
