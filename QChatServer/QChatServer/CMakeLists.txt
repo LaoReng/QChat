@@ -20,6 +20,7 @@ cmake_minimum_required (VERSION 3.8)
 set(srcs
 QChatServer.cpp
 DBHelper.cpp
+SelectServer.cpp
 )
 
 
